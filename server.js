@@ -13,14 +13,15 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // PostgreSQL Connection Pool
 const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'password',
-  host: process.env.DB_HOST || 'localhost',
-  port: process.env.DB_PORT || 5432,
-  database: process.env.DB_NAME || 'maareeye_hospital'
-});
+  const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // Fallback configuration for local development and multi-platform support
+  user: process.env.DB_USER || process.env.PGUSER || 'postgres',
+  password: process.env.DB_PASSWORD || process.env.PGPASSWORD || 'password',
+  host: process.env.DB_HOST || process.env.PGHOST || 'maareeye-db.railway.internal' || 'localhost',
+  port: process.env.DB_PORT || process.env.PGPORT || 5432,
+  database: process.env.DB_NAME || process.env.PGDATABASE || 'maareeye_hospital'
 
-pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
 });
 
