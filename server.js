@@ -12,26 +12,34 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 // PostgreSQL Connection Pool
-const pool = new Pool({
-  const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Fallback configuration for local development and multi-platform support
-  user: process.env.DB_USER || process.env.PGUSER || 'postgres',
-  password: process.env.DB_PASSWORD || process.env.PGPASSWORD || 'password',
-  host: process.env.DB_HOST || process.env.PGHOST || 'maareeye-db.railway.internal' || 'localhost',
-  port: process.env.DB_PORT || process.env.PGPORT || 5432,
-  database: process.env.DB_NAME || process.env.PGDATABASE || 'maareeye_hospital'
-
-  console.error('Unexpected error on idle client', err);
-});
+let pool;
+try {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    // Fallback configuration for local development and multi-platform support
+    user: process.env.DB_USER || process.env.PGUSER || 'postgres',
+    password: process.env.DB_PASSWORD || process.env.PGPASSWORD || 'password',
+    host: process.env.DB_HOST || process.env.PGHOST || 'maareeye-db.railway.internal' || 'localhost',
+    port: process.env.DB_PORT || process.env.PGPORT || 5432,
+    database: process.env.DB_NAME || process.env.PGDATABASE || 'maareeye_hospital',
+  });
+  
+  pool.on('error', (err) => {
+    console.error('Unexpected error on idle client', err);
+  });
+  
+  console.log('Database pool initialized successfully');
+} catch (err) {
+  console.error('Failed to initialize database pool:', err.message);
+  pool = null;
+}
 
 // Root Endpoint
 app.get('/', (req, res) => {
-   res.json({ status: 'OK', message: 'Maareeye Hospital System is running' });
-  });
+  res.json({ status: 'OK', message: 'Maareeye Hospital System is running' });
+});
 
-
-// Health Check Endpoint
+// Health Check Endpoint - Does NOT require database
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Maareeye Hospital System is running' });
 });
@@ -39,6 +47,9 @@ app.get('/api/health', (req, res) => {
 // Database Test Endpoint
 app.get('/api/db-test', async (req, res) => {
   try {
+    if (!pool) {
+      return res.status(500).json({ status: 'Error', error: 'Database pool not initialized' });
+    }
     const result = await pool.query('SELECT NOW()');
     res.json({ status: 'OK', database: 'Connected', time: result.rows[0] });
   } catch (err) {
@@ -50,6 +61,9 @@ app.get('/api/db-test', async (req, res) => {
 // Hospital Info Endpoint
 app.get('/api/hospital', async (req, res) => {
   try {
+    if (!pool) {
+      return res.status(500).json({ status: 'Error', error: 'Database pool not initialized' });
+    }
     const result = await pool.query(
       'SELECT id, name, address, phone, email FROM hospitals LIMIT 1'
     );
@@ -66,6 +80,9 @@ app.get('/api/hospital', async (req, res) => {
 // Get All Doctors
 app.get('/api/doctors', async (req, res) => {
   try {
+    if (!pool) {
+      return res.status(500).json({ status: 'Error', error: 'Database pool not initialized' });
+    }
     const result = await pool.query(
       'SELECT id, name, specialization, phone, email FROM doctors ORDER BY name'
     );
@@ -79,6 +96,9 @@ app.get('/api/doctors', async (req, res) => {
 // Get All Patients
 app.get('/api/patients', async (req, res) => {
   try {
+    if (!pool) {
+      return res.status(500).json({ status: 'Error', error: 'Database pool not initialized' });
+    }
     const result = await pool.query(
       'SELECT id, name, email, phone, date_of_birth FROM patients ORDER BY name'
     );
@@ -92,6 +112,9 @@ app.get('/api/patients', async (req, res) => {
 // Get All Appointments
 app.get('/api/appointments', async (req, res) => {
   try {
+    if (!pool) {
+      return res.status(500).json({ status: 'Error', error: 'Database pool not initialized' });
+    }
     const result = await pool.query(`
       SELECT a.id, a.date, a.time, p.name as patient_name, d.name as doctor_name 
       FROM appointments a
