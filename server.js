@@ -24,6 +24,12 @@ pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
 });
 
+// Root Endpoint
+app.get('/', (req, res) => {
+   res.json({ status: 'OK', message: 'Maareeye Hospital System is running' });
+  });
+
+
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Maareeye Hospital System is running' });
