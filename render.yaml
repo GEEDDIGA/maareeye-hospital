@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: maareeye-hospital
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DB_USER
+        fromDatabase:
+          name: maareeye-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: maareeye-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: maareeye-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: maareeye-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: maareeye-db
+          property: database
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: maareeye-db
+    engine: postgres
+    plan: free
