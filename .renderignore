@@ -1,0 +1,5 @@
+django/
+django
+*.pyc
+__pycache__/
+*.py
