@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
 
@@ -11,12 +12,14 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
 // PostgreSQL Connection Pool
 let pool;
 try {
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    // Fallback configuration for local development and multi-platform support
     user: process.env.DB_USER || process.env.PGUSER || 'postgres',
     password: process.env.DB_PASSWORD || process.env.PGPASSWORD || 'password',
     host: process.env.DB_HOST || process.env.PGHOST || 'maareeye-db.railway.internal' || 'localhost',
@@ -42,7 +45,6 @@ const initializeDatabase = async () => {
   }
   
   try {
-    // Check if tables already exist
     const tableCheck = await pool.query(`
       SELECT EXISTS (
         SELECT FROM information_schema.tables 
@@ -57,7 +59,6 @@ const initializeDatabase = async () => {
     
     console.log('Initializing database schema...');
     
-    // Drop existing tables if any
     await pool.query(`
       DROP TABLE IF EXISTS appointments CASCADE;
       DROP TABLE IF EXISTS doctors CASCADE;
@@ -65,7 +66,6 @@ const initializeDatabase = async () => {
       DROP TABLE IF EXISTS hospitals CASCADE;
     `);
     
-    // Create hospitals table
     await pool.query(`
       CREATE TABLE hospitals (
         id SERIAL PRIMARY KEY,
@@ -77,7 +77,6 @@ const initializeDatabase = async () => {
       );
     `);
     
-    // Create doctors table
     await pool.query(`
       CREATE TABLE doctors (
         id SERIAL PRIMARY KEY,
@@ -90,7 +89,6 @@ const initializeDatabase = async () => {
       );
     `);
     
-    // Create patients table
     await pool.query(`
       CREATE TABLE patients (
         id SERIAL PRIMARY KEY,
@@ -103,7 +101,6 @@ const initializeDatabase = async () => {
       );
     `);
     
-    // Create appointments table
     await pool.query(`
       CREATE TABLE appointments (
         id SERIAL PRIMARY KEY,
@@ -117,7 +114,6 @@ const initializeDatabase = async () => {
       );
     `);
     
-    // Create indexes
     await pool.query('CREATE INDEX idx_doctors_hospital ON doctors(hospital_id);');
     await pool.query('CREATE INDEX idx_patients_hospital ON patients(hospital_id);');
     await pool.query('CREATE INDEX idx_appointments_hospital ON appointments(hospital_id);');
@@ -125,7 +121,6 @@ const initializeDatabase = async () => {
     await pool.query('CREATE INDEX idx_appointments_patient ON appointments(patient_id);');
     await pool.query('CREATE INDEX idx_appointments_date ON appointments(date);');
     
-    // Insert sample data
     const hospitalResult = await pool.query(`
       INSERT INTO hospitals (name, address, phone, email) 
       VALUES ('Maareeye Hospital', '123 Main St, Mogadishu', '+252-1-234567', 'info@maareeye.com')
@@ -133,7 +128,6 @@ const initializeDatabase = async () => {
     `);
     const hospitalId = hospitalResult.rows[0].id;
     
-    // Insert doctors
     await pool.query(`
       INSERT INTO doctors (hospital_id, name, specialization, phone, email) VALUES
       ($1, 'Dr. Ahmed Hassan', 'Cardiology', '+252-1-111111', 'ahmed@maareeye.com'),
@@ -141,7 +135,6 @@ const initializeDatabase = async () => {
       ($1, 'Dr. Mohamed Ali', 'General Surgery', '+252-1-333333', 'mohamed@maareeye.com');
     `, [hospitalId]);
     
-    // Insert patients
     await pool.query(`
       INSERT INTO patients (hospital_id, name, email, phone, date_of_birth) VALUES
       ($1, 'Hassan Abdi', 'hassan@example.com', '+252-1-444444', '1990-01-15'),
@@ -149,7 +142,6 @@ const initializeDatabase = async () => {
       ($1, 'Samir Ibrahim', 'samir@example.com', '+252-1-666666', '1992-03-10');
     `, [hospitalId]);
     
-    // Insert appointments
     const doctors = await pool.query('SELECT id FROM doctors WHERE hospital_id = $1;', [hospitalId]);
     const patients = await pool.query('SELECT id FROM patients WHERE hospital_id = $1;', [hospitalId]);
     
@@ -168,17 +160,11 @@ const initializeDatabase = async () => {
   }
 };
 
-// Initialize database on startup
 if (pool) {
   initializeDatabase().catch(err => console.error('Initialization error:', err));
 }
 
-// Root Endpoint
-app.get('/', (req, res) => {
-  res.json({ status: 'OK', message: 'Maareeye Hospital System is running' });
-});
-
-// Health Check Endpoint - Does NOT require database
+// Health Check Endpoint
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Maareeye Hospital System is running' });
 });
