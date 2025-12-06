@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maareeye Hospital Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .card-content {
+            color: #666;
+            line-height: 1.8;
+        }
+        
+        .data-grid {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .data-grid h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #667eea;
+            padding: 20px;
+        }
+        
+        .error {
+            color: #e74c3c;
+            padding: 10px;
+            background: #fadbd8;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        th {
+            background: #f8f9fa;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #764ba2;
+        }
+        
+        .status-ok {
+            color: #27ae60;
+            font-weight: 600;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Maareeye Hospital Management System</h1>
+            <p>Hospital Management System with Node.js + PostgreSQL</p>
+        </div>
+        
+        <div class="dashboard">
+            <div class="card">
+                <h2>✓ System Status</h2>
+                <div class="card-content">
+                    <p>Status: <span class="status-ok">OPERATIONAL</span></p>
+                    <p id="health-status">Loading...</p>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🏛️ Hospital Info</h2>
+                <div class="card-content" id="hospital-info">
+                    Loading...
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>👨‍⚕️ Doctors</h2>
+                <div class="card-content" id="doctors-count">
+                    Loading...
+                </div>
+            </div>
+        </div>
+        
+        <div class="data-grid">
+            <h3>👨‍⚕️ Doctors List</h3>
+            <div id="doctors-container" class="loading">Loading doctors...</div>
+        </div>
+        
+        <div class="data-grid">
+            <h3>👥 Patients List</h3>
+            <div id="patients-container" class="loading">Loading patients...</div>
+        </div>
+        
+        <div class="data-grid">
+            <h3>📅 Appointments</h3>
+            <div id="appointments-container" class="loading">Loading appointments...</div>
+        </div>
+        
+        <div class="button-group">
+            <button onclick="refreshData()">🔄 Refresh Data</button>
+            <button onclick="checkHealth()">💚 Check Health</button>
+        </div>
+    </div>
+    
+    <script>
+        // Fetch health status
+        async function checkHealth() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                const statusEl = document.getElementById('health-status');
+                statusEl.innerHTML = `<p>${data.message}</p>`;
+            } catch (error) {
+                console.error('Health check failed:', error);
+                document.getElementById('health-status').innerHTML = '<p class="error">Error checking health</p>';
+            }
+        }
+        
+        // Fetch hospital info
+        async function loadHospitalInfo() {
+            try {
+                const response = await fetch('/api/hospital');
+                const data = await response.json();
+                if (data.data) {
+                    const hospital = data.data;
+                    document.getElementById('hospital-info').innerHTML = `
+                        <p><strong>${hospital.name}</strong></p>
+                        <p>${hospital.address || 'N/A'}</p>
+                        <p>📞 ${hospital.phone || 'N/A'}</p>
+                        <p>📧 ${hospital.email || 'N/A'}</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load hospital info:', error);
+                document.getElementById('hospital-info').innerHTML = '<p class="error">Failed to load hospital info</p>';
+            }
+        }
+        
+        // Fetch and display doctors
+        async function loadDoctors() {
+            try {
+                const response = await fetch('/api/doctors');
+                const data = await response.json();
+                const container = document.getElementById('doctors-container');
+                
+                if (data.data && data.data.length > 0) {
+                    document.getElementById('doctors-count').innerHTML = `<p><strong>${data.data.length} doctors</strong></p>`;
+                    
+                    let html = '<table><thead><tr><th>Name</th><th>Specialization</th><th>Phone</th><th>Email</th></tr></thead><tbody>';
+                    data.data.forEach(doctor => {
+                        html += `<tr><td>${doctor.name}</td><td>${doctor.specialization || 'N/A'}</td><td>${doctor.phone || 'N/A'}</td><td>${doctor.email || 'N/A'}</td></tr>`;
+                    });
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="empty-state">No doctors found</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load doctors:', error);
+                document.getElementById('doctors-container').innerHTML = '<p class="error">Error loading doctors</p>';
+            }
+        }
+        
+        // Fetch and display patients
+        async function loadPatients() {
+            try {
+                const response = await fetch('/api/patients');
+                const data = await response.json();
+                const container = document.getElementById('patients-container');
+                
+                if (data.data && data.data.length > 0) {
+                    let html = '<table><thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>DOB</th></tr></thead><tbody>';
+                    data.data.forEach(patient => {
+                        html += `<tr><td>${patient.name}</td><td>${patient.email || 'N/A'}</td><td>${patient.phone || 'N/A'}</td><td>${patient.date_of_birth || 'N/A'}</td></tr>`;
+                    });
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="empty-state">No patients found</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load patients:', error);
+                document.getElementById('patients-container').innerHTML = '<p class="error">Error loading patients</p>';
+            }
+        }
+        
+        // Fetch and display appointments
+        async function loadAppointments() {
+            try {
+                const response = await fetch('/api/appointments');
+                const data = await response.json();
+                const container = document.getElementById('appointments-container');
+                
+                if (data.data && data.data.length > 0) {
+                    let html = '<table><thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Doctor</th></tr></thead><tbody>';
+                    data.data.forEach(appointment => {
+                        html += `<tr><td>${appointment.date}</td><td>${appointment.time}</td><td>${appointment.patient_name}</td><td>${appointment.doctor_name}</td></tr>`;
+                    });
+                    html += '</tbody></table>';
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = '<p class="empty-state">No appointments found</p>';
+                }
+            } catch (error) {
+                console.error('Failed to load appointments:', error);
+                document.getElementById('appointments-container').innerHTML = '<p class="error">Error loading appointments</p>';
+            }
+        }
+        
+        // Refresh all data
+        async function refreshData() {
+            document.getElementById('doctors-container').innerHTML = '<div class="loading">Loading...</div>';
+            document.getElementById('patients-container').innerHTML = '<div class="loading">Loading...</div>';
+            document.getElementById('appointments-container').innerHTML = '<div class="loading">Loading...</div>';
+            
+            await Promise.all([
+                loadHospitalInfo(),
+                loadDoctors(),
+                loadPatients(),
+                loadAppointments(),
+                checkHealth()
+            ]);
+        }
+        
+        // Initial load when page loads
+        window.addEventListener('DOMContentLoaded', refreshData);
+    </script>
+</body>
+</html>
